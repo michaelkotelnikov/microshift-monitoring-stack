@@ -1,0 +1,115 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: node-exporter
+  namespace: microshift-monitoring
+  labels:
+    app.kubernetes.io/name: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: node-exporter
+    spec:
+      restartPolicy: Always
+      initContainers:
+        - resources:
+            requests:
+              cpu: 1m
+              memory: 1Mi
+          terminationMessagePath: /dev/termination-log
+          name: init-textfile
+          command:
+            - /bin/sh
+            - '-c'
+            - >-
+              [[ ! -d /node_exporter/collectors/init ]] || find
+              /node_exporter/collectors/init -perm /111 -type f -exec {} \;
+          env:
+            - name: TMPDIR
+              value: /tmp
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: node-exporter-textfile
+              mountPath: /var/node_exporter/textfile
+            - name: node-exporter-wtmp
+              readOnly: true
+              mountPath: /var/log/wtmp
+          terminationMessagePolicy: FallbackToLogsOnError
+          image: >-
+            quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:4578b08e8c013651a18f58957f777d7fb635959165e9353e6d20f192ae8386dc
+          workingDir: /var/node_exporter/textfile
+      serviceAccountName: node-exporter
+      hostPID: true
+      schedulerName: default-scheduler
+      hostNetwork: true
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+      containers:
+        - resources:
+            requests:
+              cpu: 8m
+              memory: 32Mi
+          terminationMessagePath: /dev/termination-log
+          name: node-exporter
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: sys
+              readOnly: true
+              mountPath: /host/sys
+              mountPropagation: HostToContainer
+            - name: root
+              readOnly: true
+              mountPath: /host/root
+              mountPropagation: HostToContainer
+            - name: node-exporter-textfile
+              readOnly: true
+              mountPath: /var/node_exporter/textfile
+          terminationMessagePolicy: FallbackToLogsOnError
+          image: >-
+            quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:4578b08e8c013651a18f58957f777d7fb635959165e9353e6d20f192ae8386dc
+          workingDir: /var/node_exporter/textfile
+          args:
+            - '--web.listen-address=0.0.0.0:9100'
+            - '--path.sysfs=/host/sys'
+            - '--path.rootfs=/host/root'
+            - '--no-collector.wifi'
+            - >-
+              --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/k3s/containerd/.+|var/lib/docker/.+|var/lib/kubelet/pods/.+)($|/)
+            - '--collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$'
+            - '--collector.netdev.device-exclude=^(veth.*|[a-f0-9]{15})$'
+            - '--collector.cpu.info'
+            - '--collector.textfile.directory=/var/node_exporter/textfile'
+            - '--no-collector.cpufreq'
+      serviceAccount: node-exporter
+      volumes:
+        - name: sys
+          hostPath:
+            path: /sys
+            type: ''
+        - name: root
+          hostPath:
+            path: /
+            type: ''
+        - name: node-exporter-textfile
+          emptyDir: {}
+        - name: node-exporter-wtmp
+          hostPath:
+            path: /var/log/wtmp
+            type: File
+      dnsPolicy: ClusterFirst
+      tolerations:
+        - operator: Exists
+      priorityClassName: system-cluster-critical
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
+      maxSurge: 0
+  revisionHistoryLimit: 10

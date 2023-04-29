@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: microshift-monitoring
+  labels:
+    app: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: prometheus
+          args:
+            - --enable-feature=agent
+            - --log.level=debug
+            - --config.file=/opt/bitnami/prometheus/conf/prometheus.yml
+          image: docker.io/bitnami/prometheus:2.36.1
+          ports:
+            - containerPort: 9090
+              name: prometheus
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /opt/bitnami/prometheus/conf/prometheus.yml
+              name: prometheus
+              subPath: prometheus.yml
+      serviceAccountName: prometheus-k8s
+      volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: prometheus.yml
+              path: prometheus.yml
+            name: prometheus
+          name: prometheus

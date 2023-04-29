@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: node-exporter
+  name: node-exporter-metrics
+  namespace: microshift-monitoring
+spec:
+  clusterIP: None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http-metrics
+    port: 9100
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app.kubernetes.io/name: node-exporter
+  type: ClusterIP
