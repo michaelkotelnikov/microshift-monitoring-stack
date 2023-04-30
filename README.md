@@ -42,7 +42,7 @@ $ oc apply -f microshift/prometheus-agent/
 
 | Component             | Memory      | CPU         | Network (transmit) | Network (receive) |
 | -----------           | ----------- | ----------- | -----------        | -----------
-| Prometheus Agent      | 275 MiB     | 15m         | 30 KiB/s           | 3 KiB/s
+| Prometheus Agent      | 350 MiB     | 15m         | 30 KiB/s           | 3 KiB/s
 | Kube State Metrics    | 50 MiB      | 1m          | 1 KiB/s            | 20 KiB/s
 | Node Exporter         | 40 MiB      | 0.5m        | 30 KiB/s           | 3 KiB/s
 
